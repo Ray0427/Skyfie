@@ -62,6 +62,8 @@ const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH/1.5;
 const double SIZE_DIFF=0.05;
 const int centerRange=20;
 bool orangeFlag=false,blueFlag=false;
+int timer=0;
+cv::Point pos(-1,-1);
 
 // Video used
 #define ALLOWANCE_THRESHOLD 7.5
@@ -529,11 +531,129 @@ std::vector<Object> trackFilteredObject(Object theObject,cv::Mat threshold,cv::M
     }
     return objects;
 }
+
+cv::Point computeImage(cv::Mat image) {
+    std::vector < Object > orangeObjects, blueObjects;
+    cv::Mat threshold;
+    cv::Mat threshold2;
+    cv::Mat HSV;
+    Object orange("orange"), blue("blue");
+//    int row = image.rows,
+//    col = image.cols;
+    orangeFlag = false;
+    blueFlag = false;
+    //45~49%cpu
+    cvtColor(image, HSV, cv::COLOR_BGR2HSV); //58~67% cpu
+    inRange(HSV, orange.getHSVmin(), orange.getHSVmax(), threshold); //63~71%cpu
+    morphOps(threshold); //68~84%cpu
+    orangeObjects = trackFilteredObject(orange, threshold, HSV, image); //81~87%
+    if (orangeObjects.size() > 1) {
+        orangeFlag = true;
+        printf("\n1 ");
+        for (int i = 0; i < orangeObjects.size() - 1; i++) {
+            for (int j = i + 1; j < orangeObjects.size(); j++) {
+                int posX = (orangeObjects.at(i).getXPos() + orangeObjects.at(j).getXPos()) / 2;
+                int posY = (orangeObjects.at(i).getYPos() + orangeObjects.at(j).getYPos()) / 2;
+                inRange(HSV, blue.getHSVmin(), blue.getHSVmax(), threshold2); //68~85%cpu
+                //                morphOps(threshold2);//81~85%cpu
+                //                printf("*%d* ",threshold2.at<uchar>(posY, posX));
+                
+                //中心是藍色
+                if (threshold2.at < uchar > (posY, posX) == 255) {
+                    blueFlag = true;
+                    printf("2 ");
+                    //兩個橘色面積差小於0.05
+                    int area1 = orangeObjects.at(i).getArea(),
+                    area2 = orangeObjects.at(j).getArea();
+                    if (abs((area1 - area2) / area2) < SIZE_DIFF) {
+                        printf("3 ");
+                        //printf("%d,%d,%f\n",orangeObjects.at(i).getArea(),orangeObjects.at(j).getArea(),pow(orangeObjects.at(i).getXPos()-orangeObjects.at(j).getXPos(),2)+pow(orangeObjects.at(i).getYPos()-orangeObjects.at(j).getYPos(),2));
+                        //printf("%f\n",(pow(orangeObjects.at(i).getXPos()-orangeObjects.at(j).getXPos(),2)+pow(orangeObjects.at(i).getYPos()-orangeObjects.at(j).getYPos(),2))/(orangeObjects.at(i).getArea()+orangeObjects.at(j).getArea()));
+                        //距離平方與大小比小於5
+                        if ((pow(orangeObjects.at(i).getXPos() - orangeObjects.at(j).getXPos(), 2) + pow(orangeObjects.at(i).getYPos() - orangeObjects.at(j).getYPos(), 2)) / (area1 + area2) < 5) {
+                            printf("4 ");
+                            //                            cv::circle(image,cv::Point(posX,posY),10,Scalar(0,0,255));
+                            //                            cv::putText(image,intToString(posX)+ " , " + intToString(posY),cv::Point(posX,posY+20),1,1,Scalar(0,0,255));
+                            //                            cv::putText(image,"center",cv::Point(posX,posY-20),1,4,Scalar(0,0,255));
+                            //                            //                            printf("%d %d %d %d\n",row,col,posX,posY);
+                            
+                            
+                            return cv::Point(posX, posY);
+                            //                            NSLog(@"\n%@ size:%d (%d,%d) (%d,%d)",response.text,area1+area2,orangeObjects.at(i).getXPos(),orangeObjects.at(i).getYPos(),orangeObjects.at(j).getXPos(),orangeObjects.at(j).getYPos());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return cv::Point(-1, -1);
+}
 #ifdef __cplusplus
 - (void)processImage:(cv::Mat&)image;
 {
     if ([UIDevice currentDevice].orientation == UIDeviceOrientationPortrait || [UIDevice currentDevice].orientation == UIDeviceOrientationPortraitUpsideDown) {
-        std::vector<Object> orangeObjects,blueObjects;
+        timer++;
+        cv::Mat tmp;
+        int row = image.rows,
+        col = image.cols;
+            image.copyTo(tmp);
+            if (timer > 20) {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^ (void) {
+                    //背景Thread
+                    pos = cv::Point(-1, -1);
+                    pos = computeImage(tmp);
+                    
+                    dispatch_async(dispatch_get_main_queue(), ^ (void) {
+                        
+                        
+                    });
+                });
+                timer = 0;
+            }
+            //        printf("%d %d\t",pos.x,pos.y);
+            if (pos.x >= 0) {
+        
+                cv::circle(image, pos, 20, cv::Scalar(255, 255, 255), -1);
+                if (_isTouch && _isCalibrationOK) {
+                    if (pos.x < col / 2 - centerRange) {
+                        // 飛機應向右
+                        NSLog(@"RIGHT");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
+                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, -15);
+                    } else if (pos.x > col / 2 + centerRange) {
+                        // 飛機應向左
+                        NSLog(@"LEFT");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
+                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 15);
+                    } else {
+                        // 飛機左右到達定點
+                        NSLog(@"左右STOP");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 0);
+                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 0);
+                    }
+                    if (pos.y < row / 2 - centerRange) {
+                        // 飛機應向下
+                        NSLog(@"DOWN");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, -15);
+                    } else if (pos.y > row / 2 + centerRange + 20) {
+                        // 飛機應向上
+                        NSLog(@"UP");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 15);
+                    } else {
+                        // 飛機上下到達定點
+                        NSLog(@"上下STOP");
+                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 0);
+                    }
+                } else {
+                    [self stopDroneMoving];
+                }
+                //                    image=tmp;
+            }
+        
+        
+        
+        
+        /*std::vector<Object> orangeObjects,blueObjects;
         cv::Mat threshold;
         cv::Mat threshold2;
         cv::Mat HSV;
@@ -613,7 +733,7 @@ std::vector<Object> trackFilteredObject(Object theObject,cv::Mat threshold,cv::M
                     }
                 }
             }
-        }
+        }*/
     }
 }
 #endif
