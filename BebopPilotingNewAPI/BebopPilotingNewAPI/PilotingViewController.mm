@@ -60,7 +60,7 @@ const int MAX_NUM_OBJECTS=10;
 const int MIN_OBJECT_AREA = 3*3;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH/1.5;
 const double SIZE_DIFF=0.05;
-const int centerRange=20;
+const int centerRange=50;
 bool orangeFlag=false,blueFlag=false;
 int timer=0;
 cv::Point pos(-1,-1);
@@ -88,7 +88,7 @@ cv::Point pos(-1,-1);
     // Do any additional setup after loading the view, typically from a nib.
     self.videoCamera =[[CvVideoCamera alloc]initWithParentView:imageView];
     self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
-    self.videoCamera.defaultAVCaptureSessionPreset = AVCaptureSessionPreset1280x720;
+    self.videoCamera.defaultAVCaptureSessionPreset = AVCaptureSessionPreset640x480;
     self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationPortrait;
     self.videoCamera.defaultFPS = 30;
     self.videoCamera.grayscaleMode = NO;
@@ -537,7 +537,7 @@ cv::Point computeImage(cv::Mat image) {
     cv::Mat threshold;
     cv::Mat threshold2;
     cv::Mat HSV;
-    Object orange("orange"), blue("blue");
+    Object orange("orange"), blue("blue"),green("green");
 //    int row = image.rows,
 //    col = image.cols;
     orangeFlag = false;
@@ -554,7 +554,9 @@ cv::Point computeImage(cv::Mat image) {
             for (int j = i + 1; j < orangeObjects.size(); j++) {
                 int posX = (orangeObjects.at(i).getXPos() + orangeObjects.at(j).getXPos()) / 2;
                 int posY = (orangeObjects.at(i).getYPos() + orangeObjects.at(j).getYPos()) / 2;
-                inRange(HSV, blue.getHSVmin(), blue.getHSVmax(), threshold2); //68~85%cpu
+                //inRange(HSV, blue.getHSVmin(), blue.getHSVmax(), threshold2); //68~85%cpu
+                inRange(HSV, green.getHSVmin(), green.getHSVmax(), threshold2); //68~85%cpu
+
                 //                morphOps(threshold2);//81~85%cpu
                 //                printf("*%d* ",threshold2.at<uchar>(posY, posX));
                 
@@ -597,10 +599,10 @@ cv::Point computeImage(cv::Mat image) {
         int row = image.rows,
         col = image.cols;
             image.copyTo(tmp);
-            if (timer > 20) {
+            if (timer > 15) {
                 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^ (void) {
                     //背景Thread
-                    pos = cv::Point(-1, -1);
+//                    pos = cv::Point(-1, -1);
                     pos = computeImage(tmp);
                     
                     dispatch_async(dispatch_get_main_queue(), ^ (void) {
@@ -612,8 +614,9 @@ cv::Point computeImage(cv::Mat image) {
             }
             //        printf("%d %d\t",pos.x,pos.y);
             if (pos.x >= 0) {
-        
-                cv::circle(image, pos, 20, cv::Scalar(255, 255, 255), -1);
+                cv::line(image, cv::Point(pos.x,pos.y+centerRange), cv::Point(pos.x,pos.y-centerRange), cv::Scalar(0, 0, 255),5);
+                cv::line(image, cv::Point(pos.x+centerRange,pos.y), cv::Point(pos.x-centerRange,pos.y), cv::Scalar(0, 0, 255),5);
+//                cv::circle(image, pos, 20, cv::Scalar(255, 255, 255), -1);
                 if (_isTouch && _isCalibrationOK) {
                     if (pos.x < col / 2 - centerRange) {
                         // 飛機應向右
@@ -635,7 +638,7 @@ cv::Point computeImage(cv::Mat image) {
                         // 飛機應向下
                         NSLog(@"DOWN");
                         _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, -15);
-                    } else if (pos.y > row / 2 + centerRange + 20) {
+                    } else if (pos.y > row / 2 + centerRange ) {
                         // 飛機應向上
                         NSLog(@"UP");
                         _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 15);

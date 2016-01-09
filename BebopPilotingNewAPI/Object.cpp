@@ -48,18 +48,18 @@ Object::Object(cv::String name){
         setColor(cv::Scalar(255,0,0));
 
 	}
-	/*if(name=="green"){
+	if(name=="green"){
 
 		//TODO: use "calibration mode" to find HSV min
 		//and HSV max values
 
-		setHSVmin(Scalar(34,50,50));
-		setHSVmax(Scalar(80,220,200));
+        setHSVmin(cv::Scalar(34,50,50));
+        setHSVmax(cv::Scalar(80,255,255));
 
-		//BGR value for Yellow:
-		setColor(Scalar(0,255,0));
+        //BGR value for Yellow:
+        setColor(cv::Scalar(0,255,0));
 
-	}*/
+	}
 	/*if(name=="yellow"){
 
 		//TODO: use "calibration mode" to find HSV min
