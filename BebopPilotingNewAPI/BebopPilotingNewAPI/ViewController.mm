@@ -55,6 +55,7 @@ extern "C" {
 @end
 
 @implementation ViewController
+int i;
 
 - (void)viewDidLoad
 {
@@ -62,7 +63,14 @@ extern "C" {
     
     _tableData = [NSArray array];
     _serviceSelected = nil;
-    
+    if(i==0){
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"You didn't connect to your plane"
+                                                    message:@"Step1:Turn on your wifi\n\n   Step2:connect to your plane\n\n      Step3:Go back to the app "
+                                                   delegate:self
+                                          cancelButtonTitle:@"OK"
+                                          otherButtonTitles:nil,nil];
+    [alert show];
+    }
 }
 
 - (void) viewDidAppear:(BOOL)animated
@@ -139,10 +147,13 @@ extern "C" {
     
     if (cell == nil)
     {
+        
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:simpleTableIdentifier];
+        i=0;
     }
-    
+    i=1;
     cell.textLabel.text = [(CellData *)[_tableData objectAtIndex:indexPath.row] name];
+    
     return cell;
 }
 
@@ -161,6 +172,12 @@ extern "C" {
         
         [pilotingViewController setService: _serviceSelected];
     }
+}
+
+-(BOOL)prefersStatusBarHidden {
+    
+    return YES;
+    
 }
 
 @end

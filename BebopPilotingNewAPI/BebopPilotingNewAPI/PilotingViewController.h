@@ -54,7 +54,8 @@ extern "C" {
 #import "VideoView.h"
 #import <CoreLocation/CoreLocation.h>
 
-@interface PilotingViewController : UIViewController <CLLocationManagerDelegate,  CvVideoCameraDelegate>
+@interface PilotingViewController : UIViewController <CLLocationManagerDelegate,  CvVideoCameraDelegate,UINavigationControllerDelegate,
+UIImagePickerControllerDelegate>
 {
     // CV used
     __weak IBOutlet UIImageView *imageView;

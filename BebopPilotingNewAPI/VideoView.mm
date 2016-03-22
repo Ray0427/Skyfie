@@ -334,5 +334,10 @@
     _canDisplayVideo = YES;
 }
 
+-(BOOL)prefersStatusBarHidden {
+    
+    return YES;
+    
+}
 
 @end

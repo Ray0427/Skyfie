@@ -120,14 +120,14 @@ cv::Point pos(-1,-1);
     [imageView addGestureRecognizer:imagePan];
     [_videoView addGestureRecognizer:videoPan];
     _pictureView.hidden = true;
-//    _videoView.hidden = true;
+    //    _videoView.hidden = true;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(orientationChanged:) name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
 }
 
 - (void) viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
-
+    
     [_alertView show];
     
     // call createDeviceControllerWithService in background
@@ -388,7 +388,7 @@ void onCommandReceived (eARCONTROLLER_DICTIONARY_KEY commandKey, ARCONTROLLER_DI
         if (element != NULL) {
             switch (commandKey) {
                 case // if the command received is a battery state changed
-        ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED:
+                ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED:
                 {
                     // get the value
                     HASH_FIND_STR (element->arguments, ARCONTROLLER_DICTIONARY_KEY_COMMON_COMMONSTATE_BATTERYSTATECHANGED_PERCENT, arg);
@@ -400,7 +400,7 @@ void onCommandReceived (eARCONTROLLER_DICTIONARY_KEY commandKey, ARCONTROLLER_DI
                 }
                     
                 case // if the command received is a attitude changed
-        ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED:
+                ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED:
                 {
                     HASH_FIND_STR(element->arguments, ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_ATTITUDECHANGED_YAW, arg);
                     if (arg != NULL) {
@@ -419,7 +419,7 @@ void onCommandReceived (eARCONTROLLER_DICTIONARY_KEY commandKey, ARCONTROLLER_DI
                 }
                     
                 case // if the command received is a flying state changed
-        ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED:
+                ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED:
                 {
                     HASH_FIND_STR(element->arguments, ARCONTROLLER_DICTIONARY_KEY_ARDRONE3_PILOTINGSTATE_FLYINGSTATECHANGED_STATE, arg);
                     if (arg != NULL) {
@@ -538,8 +538,8 @@ cv::Point computeImage(cv::Mat image) {
     cv::Mat threshold2;
     cv::Mat HSV;
     Object orange("orange"), blue("blue"),green("green");
-//    int row = image.rows,
-//    col = image.cols;
+    //    int row = image.rows,
+    //    col = image.cols;
     orangeFlag = false;
     blueFlag = false;
     //45~49%cpu
@@ -550,13 +550,15 @@ cv::Point computeImage(cv::Mat image) {
     if (orangeObjects.size() > 1) {
         orangeFlag = true;
         printf("\n1 ");
+        inRange(HSV, green.getHSVmin(), green.getHSVmax(), threshold2); //68~85%cpu
+                        morphOps(threshold2);//81~85%cpu
+
         for (int i = 0; i < orangeObjects.size() - 1; i++) {
             for (int j = i + 1; j < orangeObjects.size(); j++) {
                 int posX = (orangeObjects.at(i).getXPos() + orangeObjects.at(j).getXPos()) / 2;
                 int posY = (orangeObjects.at(i).getYPos() + orangeObjects.at(j).getYPos()) / 2;
                 //inRange(HSV, blue.getHSVmin(), blue.getHSVmax(), threshold2); //68~85%cpu
-                inRange(HSV, green.getHSVmin(), green.getHSVmax(), threshold2); //68~85%cpu
-
+                
                 //                morphOps(threshold2);//81~85%cpu
                 //                printf("*%d* ",threshold2.at<uchar>(posY, posX));
                 
@@ -598,145 +600,145 @@ cv::Point computeImage(cv::Mat image) {
         cv::Mat tmp;
         int row = image.rows,
         col = image.cols;
-            image.copyTo(tmp);
-            if (timer > 15) {
-                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^ (void) {
-                    //背景Thread
-//                    pos = cv::Point(-1, -1);
-                    pos = computeImage(tmp);
+        image.copyTo(tmp);
+        if (timer > 15) {
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^ (void) {
+                //背景Thread
+                //                    pos = cv::Point(-1, -1);
+                pos = computeImage(tmp);
+                
+                dispatch_async(dispatch_get_main_queue(), ^ (void) {
                     
-                    dispatch_async(dispatch_get_main_queue(), ^ (void) {
-                        
-                        
-                    });
+                    
                 });
-                timer = 0;
-            }
-            //        printf("%d %d\t",pos.x,pos.y);
-            if (pos.x >= 0) {
-                cv::line(image, cv::Point(pos.x,pos.y+centerRange), cv::Point(pos.x,pos.y-centerRange), cv::Scalar(0, 0, 255),5);
-                cv::line(image, cv::Point(pos.x+centerRange,pos.y), cv::Point(pos.x-centerRange,pos.y), cv::Scalar(0, 0, 255),5);
-//                cv::circle(image, pos, 20, cv::Scalar(255, 255, 255), -1);
-                if (_isTouch && _isCalibrationOK) {
-                    if (pos.x < col / 2 - centerRange) {
-                        // 飛機應向右
-                        NSLog(@"RIGHT");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
-                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, -15);
-                    } else if (pos.x > col / 2 + centerRange) {
-                        // 飛機應向左
-                        NSLog(@"LEFT");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
-                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 15);
-                    } else {
-                        // 飛機左右到達定點
-                        NSLog(@"左右STOP");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 0);
-                        _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 0);
-                    }
-                    if (pos.y < row / 2 - centerRange) {
-                        // 飛機應向下
-                        NSLog(@"DOWN");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, -15);
-                    } else if (pos.y > row / 2 + centerRange ) {
-                        // 飛機應向上
-                        NSLog(@"UP");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 15);
-                    } else {
-                        // 飛機上下到達定點
-                        NSLog(@"上下STOP");
-                        _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 0);
-                    }
+            });
+            timer = 0;
+        }
+        //        printf("%d %d\t",pos.x,pos.y);
+        if (pos.x >= 0) {
+            cv::line(image, cv::Point(pos.x,pos.y+centerRange), cv::Point(pos.x,pos.y-centerRange), cv::Scalar(0, 0, 255),5);
+            cv::line(image, cv::Point(pos.x+centerRange,pos.y), cv::Point(pos.x-centerRange,pos.y), cv::Scalar(0, 0, 255),5);
+            //                cv::circle(image, pos, 20, cv::Scalar(255, 255, 255), -1);
+            if (_isTouch && _isCalibrationOK) {
+                if (pos.x < col / 2 - centerRange) {
+                    // 飛機應向右
+                    NSLog(@"RIGHT");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
+                    _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, -15);
+                } else if (pos.x > col / 2 + centerRange) {
+                    // 飛機應向左
+                    NSLog(@"LEFT");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 1);
+                    _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 15);
                 } else {
-                    [self stopDroneMoving];
+                    // 飛機左右到達定點
+                    NSLog(@"左右STOP");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDFlag(_deviceController -> aRDrone3, 0);
+                    _deviceController -> aRDrone3 -> setPilotingPCMDRoll(_deviceController -> aRDrone3, 0);
                 }
-                //                    image=tmp;
+                if (pos.y < row / 2 - centerRange) {
+                    // 飛機應向下
+                    NSLog(@"DOWN");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, -15);
+                } else if (pos.y > row / 2 + centerRange ) {
+                    // 飛機應向上
+                    NSLog(@"UP");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 15);
+                } else {
+                    // 飛機上下到達定點
+                    NSLog(@"上下STOP");
+                    _deviceController -> aRDrone3 -> setPilotingPCMDGaz(_deviceController -> aRDrone3, 0);
+                }
+            } else {
+                [self stopDroneMoving];
             }
+            //                    image=tmp;
+        }
         
         
         
         
         /*std::vector<Object> orangeObjects,blueObjects;
-        cv::Mat threshold;
-        cv::Mat threshold2;
-        cv::Mat HSV;
-        cv::cvtColor(image,HSV,cv::COLOR_BGR2HSV);
-        Object orange("orange"),blue("blue");
-        int row=image.rows,
-        col=image.cols;
-        orangeFlag=false;
-        blueFlag=false;
-    
-        cvtColor(image,HSV,cv::COLOR_BGR2HSV);
-        inRange(HSV,cv::Scalar(0, 130, 160),orange.getHSVmax(),threshold);
-        morphOps(threshold);
-        inRange(HSV,blue.getHSVmin(),blue.getHSVmax(),threshold2);
-        morphOps(threshold2);
-    
-        orangeObjects=trackFilteredObject(orange,threshold,HSV,image);
-        if (orangeObjects.size()>1) {
-            orangeFlag=true;
-            log(1);
-            for (int i=0; i<orangeObjects.size()-1; i++) {
-                for (int j=i+1; j<orangeObjects.size(); j++) {
-                    int posX=(orangeObjects.at(i).getXPos()+orangeObjects.at(j).getXPos())/2;
-                    int posY=(orangeObjects.at(i).getYPos()+orangeObjects.at(j).getYPos())/2;
-                
-                    if (threshold2.at<uchar>(posY, posX)==255) {
-                        blueFlag=true;
-                        //兩個橘色面積差小於0.05
-                        int area1=orangeObjects.at(i).getArea(),
-                        area2=orangeObjects.at(j).getArea();
-                        if(abs((area1-area2)/area2)<SIZE_DIFF){
-                            //距離與大小比小於5
-                            if ((pow(orangeObjects.at(i).getXPos()-orangeObjects.at(j).getXPos(),2)+pow(orangeObjects.at(i).getYPos()-orangeObjects.at(j).getYPos(),2))/(area1+area2)<5) {
-                                cv::circle(image,cv::Point(posX,posY),10,cv::Scalar(0,0,255));
-                                cv::putText(image,intToString(posX)+ " , " + intToString(posY),cv::Point(posX,posY+20),1,1,cv::Scalar(0,0,255));
-                                cv::putText(image,"center",cv::Point(posX,posY-20),1,4,cv::Scalar(0,0,255));
-                                if (_isTouch && _isCalibrationOK) {
-                                    if (posX<col/2-centerRange) {
-                                        // 飛機應向右
-                                        NSLog(@"RIGHT");
-                                        _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 1);
-                                        _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, -15);
-                                    }
-                                    else if (posX>col/2+centerRange){
-                                        // 飛機應向左
-                                        NSLog(@"LEFT");
-                                        _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 1);
-                                        _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, 15);
-                                    }
-                                    else {
-                                        // 飛機左右到達定點
-                                        NSLog(@"左右STOP");
-                                        _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 0);
-                                        _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, 0);
-                                    }
-                                    if (posY<row/2-centerRange) {
-                                        // 飛機應向下
-                                        NSLog(@"DOWN");
-                                        _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, -15);
-                                    }
-                                    else if (posY>row/2+centerRange+20){
-                                        // 飛機應向上
-                                        NSLog(@"UP");
-                                        _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, 15);
-                                    }
-                                    else{
-                                        // 飛機上下到達定點
-                                        NSLog(@"上下STOP");
-                                        _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, 0);
-                                    }
-                                }
-                                else {
-                                    [self stopDroneMoving];
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }*/
+         cv::Mat threshold;
+         cv::Mat threshold2;
+         cv::Mat HSV;
+         cv::cvtColor(image,HSV,cv::COLOR_BGR2HSV);
+         Object orange("orange"),blue("blue");
+         int row=image.rows,
+         col=image.cols;
+         orangeFlag=false;
+         blueFlag=false;
+         
+         cvtColor(image,HSV,cv::COLOR_BGR2HSV);
+         inRange(HSV,cv::Scalar(0, 130, 160),orange.getHSVmax(),threshold);
+         morphOps(threshold);
+         inRange(HSV,blue.getHSVmin(),blue.getHSVmax(),threshold2);
+         morphOps(threshold2);
+         
+         orangeObjects=trackFilteredObject(orange,threshold,HSV,image);
+         if (orangeObjects.size()>1) {
+         orangeFlag=true;
+         log(1);
+         for (int i=0; i<orangeObjects.size()-1; i++) {
+         for (int j=i+1; j<orangeObjects.size(); j++) {
+         int posX=(orangeObjects.at(i).getXPos()+orangeObjects.at(j).getXPos())/2;
+         int posY=(orangeObjects.at(i).getYPos()+orangeObjects.at(j).getYPos())/2;
+         
+         if (threshold2.at<uchar>(posY, posX)==255) {
+         blueFlag=true;
+         //兩個橘色面積差小於0.05
+         int area1=orangeObjects.at(i).getArea(),
+         area2=orangeObjects.at(j).getArea();
+         if(abs((area1-area2)/area2)<SIZE_DIFF){
+         //距離與大小比小於5
+         if ((pow(orangeObjects.at(i).getXPos()-orangeObjects.at(j).getXPos(),2)+pow(orangeObjects.at(i).getYPos()-orangeObjects.at(j).getYPos(),2))/(area1+area2)<5) {
+         cv::circle(image,cv::Point(posX,posY),10,cv::Scalar(0,0,255));
+         cv::putText(image,intToString(posX)+ " , " + intToString(posY),cv::Point(posX,posY+20),1,1,cv::Scalar(0,0,255));
+         cv::putText(image,"center",cv::Point(posX,posY-20),1,4,cv::Scalar(0,0,255));
+         if (_isTouch && _isCalibrationOK) {
+         if (posX<col/2-centerRange) {
+         // 飛機應向右
+         NSLog(@"RIGHT");
+         _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 1);
+         _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, -15);
+         }
+         else if (posX>col/2+centerRange){
+         // 飛機應向左
+         NSLog(@"LEFT");
+         _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 1);
+         _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, 15);
+         }
+         else {
+         // 飛機左右到達定點
+         NSLog(@"左右STOP");
+         _deviceController->aRDrone3->setPilotingPCMDFlag(_deviceController->aRDrone3, 0);
+         _deviceController->aRDrone3->setPilotingPCMDRoll(_deviceController->aRDrone3, 0);
+         }
+         if (posY<row/2-centerRange) {
+         // 飛機應向下
+         NSLog(@"DOWN");
+         _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, -15);
+         }
+         else if (posY>row/2+centerRange+20){
+         // 飛機應向上
+         NSLog(@"UP");
+         _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, 15);
+         }
+         else{
+         // 飛機上下到達定點
+         NSLog(@"上下STOP");
+         _deviceController->aRDrone3->setPilotingPCMDGaz(_deviceController->aRDrone3, 0);
+         }
+         }
+         else {
+         [self stopDroneMoving];
+         }
+         }
+         }
+         }
+         }
+         }
+         }*/
     }
 }
 #endif
@@ -1029,7 +1031,7 @@ cv::Point computeImage(cv::Mat image) {
     else {
         expectedHeading = _phoneHeading + 180;
     }
-
+    
     float diff = expectedHeading - _droneHeading;
     if ( diff < -ALLOWANCE_THRESHOLD || diff > ALLOWANCE_THRESHOLD ) {
         _isCalibrationOK = false;
@@ -1089,7 +1091,7 @@ cv::Point computeImage(cv::Mat image) {
 - (void)createDataTransferManager
 {
     NSString *productIP = @"192.168.42.1";
-
+    
     eARDATATRANSFER_ERROR result = ARDATATRANSFER_OK;
     _manager = ARDATATRANSFER_Manager_New(&result);
     
@@ -1159,8 +1161,8 @@ static void* ARMediaStorage_retreiveAllMediasAsync(void* arg)
                 // Do what you want with this mediaObject
             }
         }
-//        [self downloadMedias:mediaObject withCount:1];
-//        NSLog(@"Call download thumbnails");
+        //        [self downloadMedias:mediaObject withCount:1];
+        //        NSLog(@"Call download thumbnails");
         [self startMediaThumbnailDownloadThread];
     }
 }
@@ -1202,10 +1204,10 @@ void availableMediaCallback (void* arg, ARDATATRANSFER_Media_t *media, int index
 //    for (int i = 0 ; i < count && result == ARDATATRANSFER_OK; i++)
 //    {
 //        ARDATATRANSFER_Media_t *media = &medias[i];
-//        
+//
 //        result = ARDATATRANSFER_MediasDownloader_AddMediaToQueue(_manager, media, medias_downloader_progress_callback, (__bridge void *)(self), medias_downloader_completion_callback,(__bridge void*)self);
 //    }
-//    
+//
 //    if (result == ARDATATRANSFER_OK)
 //    {
 //        if (_threadMediasDownloader == NULL)
@@ -1234,7 +1236,7 @@ void availableMediaCallback (void* arg, ARDATATRANSFER_Media_t *media, int index
 //    if (_threadMediasDownloader != NULL)
 //    {
 //        ARDATATRANSFER_MediasDownloader_CancelQueueThread(_manager);
-//        
+//
 //        ARSAL_Thread_Join(_threadMediasDownloader, NULL);
 //        ARSAL_Thread_Destroy(&_threadMediasDownloader);
 //        _threadMediasDownloader = NULL;
@@ -1278,6 +1280,21 @@ void availableMediaCallback (void* arg, ARDATATRANSFER_Media_t *media, int index
     ARUTILS_Manager_Delete(&_ftpListManager);
     ARUTILS_Manager_Delete(&_ftpQueueManager);
     ARDATATRANSFER_Manager_Delete(&_manager);
+}
+
+-(BOOL)prefersStatusBarHidden {
+    
+    return YES;
+    
+}
+- (IBAction)photo:(id)sender {
+   
+        UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+        picker.delegate = self;
+        [picker setSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
+        picker.allowsEditing = true;
+        [self presentViewController:picker animated:true completion:nil];
+    
 }
 
 @end
